@@ -1,1 +1,515 @@
-<!DOCTYPE html><html lang="vi"><head>    <meta charset="UTF-8">    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <title>Hệ Thống Trắc Nghiệm Chuyên Nghiệp</title>    <style>        /* CSS Variables for Light/Dark Mode */        :root {            --bg-gradient: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); /* Aqua Light */            --glass-bg: rgba(255, 255, 255, 0.85);            --text-main: #2c3e50;            --text-muted: #555;            --grid-color: rgba(0, 0, 0, 0.07);            --primary-color: #007bff;            --hover-color: #0056b3;            --border-color: rgba(0, 0, 0, 0.1);            --correct-bg: #d4edda;            --correct-border: #28a745;            --wrong-bg: #f8d7da;            --wrong-border: #dc3545;            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);        }        [data-theme="dark"] {            --bg-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); /* Dark Blue */            --glass-bg: rgba(15, 25, 35, 0.85);            --text-main: #f8f9fa;            --text-muted: #ccc;            --grid-color: rgba(255, 255, 255, 0.05);            --primary-color: #4facfe;            --hover-color: #00f2fe;            --border-color: rgba(255, 255, 255, 0.1);            --correct-bg: rgba(40, 167, 69, 0.3);            --wrong-bg: rgba(220, 53, 69, 0.3);            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);        }        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }        body {            min-height: 100vh;            background: var(--bg-gradient);            color: var(--text-main);            display: flex;            justify-content: center;            align-items: center;            overflow-x: hidden;            transition: background 0.5s ease;        }        /* Animated Grid Background */        .grid-bg {            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;            background-image:                 linear-gradient(to right, var(--grid-color) 1px, transparent 1px),                linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);            background-size: 40px 40px;            animation: moveGrid 3s linear infinite;            z-index: -1;        }        @keyframes moveGrid {            0% { background-position: 0 0; }            100% { background-position: 40px 40px; }        }        /* Container & Glassmorphism */        .app-container {            background: var(--glass-bg);            backdrop-filter: blur(12px);            -webkit-backdrop-filter: blur(12px);            border: 1px solid var(--border-color);            box-shadow: var(--shadow);            border-radius: 20px;            padding: 30px;            width: 100%;            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);            position: relative;            display: flex;            flex-direction: column;        }        /* Window Sizes */        .size-normal { max-width: 800px; min-height: 500px; }        .size-large { max-width: 1200px; min-height: 700px; }        .size-fullscreen {             max-width: 100%; height: 100vh; border-radius: 0; border: none;             display: flex; flex-direction: column; justify-content: center;        }        /* Top Controls (Theme & Timer) */        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }                .theme-switch {            background: transparent; border: 2px solid var(--primary-color);            color: var(--text-main); padding: 8px 15px; border-radius: 20px;            cursor: pointer; font-weight: bold; transition: 0.3s;        }        .theme-switch:hover { background: var(--primary-color); color: #fff; }        .timer { font-size: 1.5rem; font-weight: bold; color: #dc3545; }        [data-theme="dark"] .timer { color: #ff6b6b; }        /* Progress Bar */        .progress-container {            width: 100%; height: 8px; background: var(--border-color);            border-radius: 4px; margin-bottom: 25px; overflow: hidden;        }        .progress-bar {            height: 100%; background: var(--primary-color); width: 0%;            transition: width 0.5s ease-in-out;        }        /* Screens */        .screen { display: none; animation: fadeIn 0.4s ease-in-out; flex: 1; }        .screen.active { display: flex; flex-direction: column; }        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }        /* Setup Screen */        .setup-screen { text-align: center; justify-content: center; align-items: center; }        .setup-screen h1 { margin-bottom: 20px; font-size: 2.5rem; }        .size-options { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; }                .btn {            padding: 12px 25px; border: none; border-radius: 8px; font-size: 1rem;            cursor: pointer; font-weight: bold; transition: all 0.2s;            background: var(--primary-color); color: #fff;        }        .btn:hover { background: var(--hover-color); transform: scale(1.05); }        .btn-outline { background: transparent; border: 2px solid var(--primary-color); color: var(--text-main); }        .btn-outline:hover { background: var(--primary-color); color: #fff; }        .btn-outline.selected { background: var(--primary-color); color: #fff; box-shadow: 0 0 15px var(--primary-color); }        .btn-large { font-size: 1.2rem; padding: 15px 40px; border-radius: 30px; }        /* Quiz Screen */        .question-header { font-size: 1.4rem; margin-bottom: 20px; font-weight: bold; line-height: 1.4; }        .options-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px; }                .option {            padding: 15px 20px; background: rgba(0,0,0,0.03); border: 2px solid var(--border-color);            border-radius: 10px; cursor: pointer; transition: all 0.2s; font-size: 1.1rem; color: var(--text-main);            display: flex; align-items: center;        }        [data-theme="dark"] .option { background: rgba(255,255,255,0.05); }        .option:hover { border-color: var(--primary-color); transform: translateX(5px); }        .option.selected { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }        .navigation-btns { display: flex; justify-content: space-between; margin-top: auto; }        .btn-submit { background: #28a745; }        .btn-submit:hover { background: #218838; }        /* Review Screen */        .review-list { overflow-y: auto; max-height: 60vh; padding-right: 10px; margin-bottom: 20px; }        .review-item { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); }        .review-item h3 { font-size: 1.1rem; margin-bottom: 10px; }        .review-option { padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid var(--border-color); }        .review-option.correct { background: var(--correct-bg); border-color: var(--correct-border); font-weight: bold;}        .review-option.wrong { background: var(--wrong-bg); border-color: var(--wrong-border); }                /* Mobile adjustments */        @media (max-width: 600px) {            .app-container { padding: 20px; border-radius: 0; min-height: 100vh; border: none;}            .size-options { flex-direction: column; }            .navigation-btns { flex-direction: column; gap: 10px; }            .btn { width: 100%; }        }                /* Custom Scrollbar */        ::-webkit-scrollbar { width: 8px; }        ::-webkit-scrollbar-track { background: transparent; }        ::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 4px; }    </style></head><body>    <div class="grid-bg"></div>    <div class="app-container size-normal" id="app">        <div class="top-bar">            <button class="theme-switch" onclick="toggleTheme()">🌓 Đổi Giao Diện</button>            <div class="timer" id="timerDisplay" style="display: none;">15:00</div>        </div>        <div class="screen setup-screen active" id="setupScreen">            <h1>Hệ Thống Trắc Nghiệm</h1>            <p style="margin-bottom: 20px; color: var(--text-muted);">Vui lòng chọn kích thước hiển thị trước khi bắt đầu</p>            <div class="size-options">                <button class="btn btn-outline selected" onclick="selectSize('size-normal', this)">Kích thước thường (Normal)</button>                <button class="btn btn-outline" onclick="selectSize('size-large', this)">Rộng (Large)</button>                <button class="btn btn-outline" onclick="selectSize('size-fullscreen', this)">Toàn Màn Hình (Full-Screen)</button>            </div>            <button class="btn btn-large" onclick="startSystem()">🚀 Bắt Đầu Làm Bài</button>        </div>        <div class="screen" id="quizScreen">            <div class="progress-container">                <div class="progress-bar" id="progressBar"></div>            </div>            <div class="question-header" id="questionText">Đang tải câu hỏi...</div>            <div class="options-container" id="optionsContainer">                </div>            <div class="navigation-btns">                <button class="btn btn-outline" id="btnPrev" onclick="prevQuestion()" style="visibility: hidden;">&laquo; Câu trước</button>                <button class="btn btn-submit" id="btnSubmit" onclick="submitQuiz()" style="display: none;">Nộp Bài ✔</button>                <button class="btn" id="btnNext" onclick="nextQuestion()">Câu tiếp &raquo;</button>            </div>        </div>        <div class="screen setup-screen" id="resultScreen">            <h1>Hoàn Thành Bài Thi!</h1>            <h2 style="font-size: 3rem; color: var(--primary-color); margin: 20px 0;" id="scoreDisplay">0/20</h2>            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">                <button class="btn btn-large" onclick="showReview()">👀 Xem Lại Chi Tiết</button>                <button class="btn btn-large btn-outline" onclick="location.reload()">🔄 Làm Lại Từ Đầu</button>            </div>        </div>        <div class="screen" id="reviewScreen">            <h2 style="margin-bottom: 20px; text-align: center;">Đánh Giá Bài Làm</h2>            <div class="review-list" id="reviewList">                </div>            <button class="btn btn-large" onclick="location.reload()" style="width: 100%;">Thoát & Bắt Đầu Lại</button>        </div>    </div>    <script>        // Data source        const rawQuestions = [            { q: 'Chức năng chính của phần mềm làm video là gì?', o: ['A. Chỉ để xem các đoạn video có sẵn.', 'B. Dùng để quản lí các tệp tin trong máy tính.', 'C. Dùng để soạn thảo văn bản.', 'D. Tạo video từ các tệp hình ảnh, âm thanh và các đoạn video ngắn.'], a: 3 },            { q: 'Trong phần mềm Video Editor, khu vực nào dùng để chứa các tệp nguyên liệu đầu vào?', o: ['A. Project library.', 'B. Storyboard.', 'C. Preview.', 'D. Timeline.'], a: 0 },            { q: 'Đâu là thứ tự đúng của các bước cơ bản để tạo một video?', o: ['A. Xuất video -> Biên tập -> Chuẩn bị tài liệu.', 'B. Chuẩn bị tài liệu -> Biên tập -> Xuất video.', 'C. Biên tập -> Chuẩn bị tài liệu -> Xuất video.', 'D. Xuất video -> Chuẩn bị tài liệu -> Biên tập.'], a: 1 },            { q: '"Storyboard" trong phần mềm làm video được hiểu là gì?', o: ['A. Thư viện dự án.', 'B. Màn hình xem trước kết quả.', 'C. Bảng phân cảnh để sắp xếp thứ tự các hình ảnh, video.', 'D. Công cụ để cắt ghép âm thanh.'], a: 2 },            { q: 'Để thay đổi thời gian hiển thị của một bức ảnh trong video, em cần điều chỉnh thông số nào?', o: ['A. Motion.', 'B. Filters.', 'C. Duration.', 'D. Text.'], a: 2 },            { q: 'Hiệu ứng nào giúp hình ảnh trong video có sự chuyển động như phóng to hoặc thu nhỏ?', o: ['A. Motion.', 'B. 3D Effects.', 'C. Filters.', 'D. Speed.'], a: 0 },            { q: 'Khi biên tập âm thanh cho video, ta có thể thực hiện thao tác nào sau đây?', o: ['A. Chỉ chèn được một bản nhạc duy nhất cho cả video.', 'B. Không thể xóa bỏ âm thanh gốc của video clip.', 'C. Thay đổi màu sắc của sóng âm thanh.', 'D. Điều chỉnh âm lượng, thêm nhạc nền hoặc lời thuyết minh.'], a: 3 },            { q: 'Thao tác "Trim" đối với một đoạn video clip có tác dụng gì?', o: ['A. Chia đoạn video thành hai phần độc lập.', 'B. Cắt bỏ một phần ở đầu hoặc cuối đoạn video để lấy đoạn cần thiết.', 'C. Thay đổi tốc độ phát của video.', 'D. Thêm hiệu ứng 3D vào video.'], a: 1 },            { q: 'Mục đích của việc thêm "Title card" vào video là gì?', o: ['A. Để chèn nhạc nền.', 'B. Để kết nối Internet cho video.', 'C. Để tạo các trang chữ giới thiệu tiêu đề hoặc nội dung chính.', 'D. Để lưu dự án vào máy tính.'], a: 2 },            { q: 'Sau khi hoàn thành việc biên tập, lệnh nào dùng để tạo ra tệp video thành phẩm (thường có đuôi .mp4)?', o: ['A. Save Project.', 'B. New Project.', 'C. Add files.', 'D. Finish video (hoặc Export).'], a: 3 },            { q: 'Bước đầu tiên trong quy trình "Các bước giải bài toán bằng máy tính" là gì?', o: ['A. Tìm thuật toán.', 'B. Xác định bài toán.', 'C. Viết chương trình.', 'D. Chạy thử và hiệu chỉnh.'], a: 1 },            { q: 'Xác định bài toán là việc xác định các yếu tố nào?', o: ['A. Dữ liệu vào (Input) và dữ liệu ra (Output).', 'B. Thuật toán và ngôn ngữ lập trình.', 'C. Lỗi cú pháp và lỗi logic.', 'D. Tên chương trình và người viết.'], a: 0 },            { q: 'Thuật toán được định nghĩa là gì?', o: ['A. Là một ngôn ngữ lập trình cụ thể như Python hay Scratch.', 'B. Là kết quả cuối cùng sau khi chạy chương trình.', 'C. Là phần cứng của máy tính.', 'D. Là dãy các chỉ dẫn rõ ràng để từ Input tìm được Output sau một số hữu hạn bước.'], a: 3 },            { q: 'Khi giải một bài toán trên máy tính, nếu thuật toán sai thì kết quả sẽ như thế nào?', o: ['A. Máy tính sẽ tự động sửa lỗi.', 'B. Chương trình vẫn chạy đúng nếu máy tính hiện đại.', 'C. Kết quả thu được sẽ không chính xác (sai logic).', 'D. Không thể viết được chương trình.'], a: 2 },            { q: 'Tại sao cần phải "Chạy thử và hiệu chỉnh" chương trình?', o: ['A. Để phát hiện và sửa các lỗi (nếu có), đảm bảo chương trình chạy đúng với các bộ dữ liệu khác nhau.', 'B. Để làm cho chương trình đẹp hơn.', 'C. Vì đây là quy định bắt buộc của ngôn ngữ lập trình.', 'D. Để máy tính hoạt động nhanh hơn.'], a: 0 },            { q: 'Một bài toán có thể có bao nhiêu thuật toán để giải?', o: ['A. Chỉ duy nhất một thuật toán.', 'B. Không cần thuật toán nào.', 'C. Có thể có nhiều thuật toán khác nhau, cần chọn thuật toán tối ưu.', 'D. Luôn luôn có hai thuật toán.'], a: 2 },            { q: 'Công cụ nào thường được dùng để mô tả thuật toán một cách trực quan trước khi viết chương trình?', o: ['A. Sơ đồ khối.', 'B. Đoạn phim ngắn.', 'C. Bảng tính Excel.', 'D. Trang trình chiếu PowerPoint.'], a: 0 },            { q: 'Việc "Dùng máy tính để giải quyết bài toán" mang lại lợi ích gì chính?', o: ['A. Luôn luôn miễn phí.', 'B. Tăng tốc độ tính toán, xử lí được lượng dữ liệu lớn và hạn chế sai sót của con người.', 'C. Thay thế hoàn toàn con người trong việc suy nghĩ.', 'D. Chỉ dùng để giải các bài toán cộng trừ đơn giản.'], a: 1 },            { q: 'Để tạo hiệu ứng 3D cho video trong phần mềm Video Editor, em chọn biểu tượng nào?', o: ['A. Filters.', 'B. 3D effects.', 'C. Motion.', 'D. Speed.'], a: 1 },            { q: 'Khi thực hiện dự án làm video về một chủ đề học tập, bước "Biên tập đoạn video trong bảng phân cảnh" thuộc giai đoạn nào?', o: ['A. Chuẩn bị.', 'B. Thực hiện (Xây dựng nội dung).', 'C. Đánh giá.', 'D. Lưu trữ.'], a: 1 }        ];        // System Variables        let questions = [];        let currentSizeClass = 'size-normal';        let currentIndex = 0;        let userAnswers = new Array(20).fill(null);        let maxProgressReached = 0; // Thanh progress chỉ tăng tiến        let timerInterval;        let timeLeft = 15 * 60; // 15 minutes        // Utility: Shuffle array        function shuffleArray(array) {            let arr = [...array];            for (let i = arr.length - 1; i > 0; i--) {                const j = Math.floor(Math.random() * (i + 1));                [arr[i], arr[j]] = [arr[j], arr[i]];            }            return arr;        }        // Theme Toggle        function toggleTheme() {            const body = document.body;            if (body.getAttribute('data-theme') === 'dark') {                body.removeAttribute('data-theme');            } else {                body.setAttribute('data-theme', 'dark');            }        }        // Setup Screen        function selectSize(sizeClass, btnElement) {            currentSizeClass = sizeClass;            document.querySelectorAll('.size-options .btn').forEach(btn => btn.classList.remove('selected'));            btnElement.classList.add('selected');        }        // Start System        function startSystem() {            // Apply size            const app = document.getElementById('app');            app.className = `app-container ${currentSizeClass}`;                        // Shuffle questions            questions = shuffleArray(rawQuestions);                        // Reset state            currentIndex = 0;            maxProgressReached = 0;            userAnswers = new Array(questions.length).fill(null);                        // UI Switch            switchScreen('quizScreen');            document.getElementById('timerDisplay').style.display = 'block';                        // Start Timer & Render            startTimer();            renderQuestion();            updateProgress();        }        function switchScreen(screenId) {            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));            document.getElementById(screenId).classList.add('active');        }        // Render Question        function renderQuestion() {            const qData = questions[currentIndex];            document.getElementById('questionText').innerHTML = `<strong>Câu ${currentIndex + 1}/${questions.length}:</strong> ${qData.q}`;                        const optionsHtml = qData.o.map((opt, index) => {                const isSelected = userAnswers[currentIndex] === index ? 'selected' : '';                return `<div class="option ${isSelected}" onclick="chooseOption(${index})">${opt}</div>`;            }).join('');                        document.getElementById('optionsContainer').innerHTML = optionsHtml;            // Nav Buttons visibility            document.getElementById('btnPrev').style.visibility = currentIndex === 0 ? 'hidden' : 'visible';                        if (currentIndex === questions.length - 1) {                document.getElementById('btnNext').style.display = 'none';                document.getElementById('btnSubmit').style.display = 'inline-block';            } else {                document.getElementById('btnNext').style.display = 'inline-block';                document.getElementById('btnSubmit').style.display = 'none';            }        }        // Handle Option Selection        function chooseOption(optionIndex) {            userAnswers[currentIndex] = optionIndex;            renderQuestion(); // Re-render to show selected state        }        // Navigation        function nextQuestion() {            if (currentIndex < questions.length - 1) {                currentIndex++;                if(currentIndex > maxProgressReached) {                    maxProgressReached = currentIndex;                    updateProgress();                }                renderQuestion();            }        }        function prevQuestion() {            if (currentIndex > 0) {                currentIndex--;                renderQuestion();            }        }        function updateProgress() {            // Progress only moves forward based on max question reached            const percentage = ((maxProgressReached + 1) / questions.length) * 100;            document.getElementById('progressBar').style.width = `${percentage}%`;        }        // Timer Logic        function startTimer() {            clearInterval(timerInterval);            timerInterval = setInterval(() => {                timeLeft--;                const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');                const s = (timeLeft % 60).toString().padStart(2, '0');                document.getElementById('timerDisplay').innerText = `${m}:${s}`;                if (timeLeft <= 0) {                    clearInterval(timerInterval);                    submitQuiz();                }            }, 1000);        }        // Submit Logic        function submitQuiz() {            clearInterval(timerInterval);            document.getElementById('timerDisplay').style.display = 'none';            document.getElementById('progressBar').style.width = '100%';            let score = 0;            questions.forEach((q, idx) => {                if (userAnswers[idx] === q.a) score++;            });            document.getElementById('scoreDisplay').innerText = `${score} / ${questions.length}`;            switchScreen('resultScreen');        }        // Review Logic        function showReview() {            switchScreen('reviewScreen');                        const reviewHtml = questions.map((q, qIndex) => {                const userAnswer = userAnswers[qIndex];                const correct = q.a;                                const optionsHtml = q.o.map((opt, oIndex) => {                    let cssClass = 'review-option';                    let icon = '';                                        if (oIndex === correct) {                        cssClass += ' correct';                        icon = ' ✅ (Đáp án đúng)';                    } else if (oIndex === userAnswer && userAnswer !== correct) {                        cssClass += ' wrong';                        icon = ' ❌ (Bạn chọn)';                    } else if (oIndex === userAnswer && userAnswer === correct) {                        icon = ' ⭐ (Bạn chọn đúng)';                    }                    return `<div class="${cssClass}">${opt}${icon}</div>`;                }).join('');                return `                    <div class="review-item">                        <h3>Câu ${qIndex + 1}: ${q.q}</h3>                        ${userAnswer === null ? '<p style="color:#dc3545; font-size:0.9rem; margin-bottom: 5px;">⚠️ Bạn chưa trả lời câu này</p>' : ''}                        ${optionsHtml}                    </div>                `;            }).join('');            document.getElementById('reviewList').innerHTML = reviewHtml;        }    </script></body></html>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vnix Hub - Trắc Nghiệm Tin Học 9</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-light: linear-gradient(135deg, #00ffff, #ffff00);
+            --bg-dark: linear-gradient(135deg, #000428, #004e92);
+            --glass-white: rgba(255, 255, 255, 0.15);
+            --glass-dark: rgba(0, 0, 0, 0.25);
+            --primary-text: #ffffff;
+            --accent: #00d2ff;
+            --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            transition: background 0.5s ease;
+            position: relative;
+        }
+
+        /* 2D Grid Animation Effect */
+        body::before {
+            content: "";
+            position: fixed;
+            top: -100%;
+            left: -100%;
+            width: 300%;
+            height: 300%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            animation: gridMove 15s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        body.light-mode { background: var(--bg-light); color: #333; }
+        body.dark-mode { background: var(--bg-dark); color: #fff; }
+
+        /* Mode Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: none;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            background: var(--glass-white);
+            color: inherit;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        /* Container Sizes */
+        .container {
+            width: 90%;
+            max-width: 800px;
+            padding: 40px;
+            border-radius: 24px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            transition: var(--transition);
+            background: var(--glass-white);
+            text-align: center;
+        }
+
+        .size-normal { max-width: 800px; }
+        .size-large { max-width: 1200px; }
+        .size-full { max-width: 95%; height: 90vh; overflow-y: auto; }
+
+        /* Setup Screen */
+        .setup-box h1 { font-size: 2rem; margin-bottom: 20px; }
+        .size-selection { margin: 25px 0; }
+        .size-btn {
+            padding: 12px 25px;
+            margin: 0 5px;
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.1);
+            background: #fff;
+            color: #000; /* Sửa lỗi font màu đen */
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .size-btn.active { background: #000; color: #fff; }
+
+        /* Quiz UI */
+        #quiz-screen, #review-screen { display: none; text-align: left; }
+        
+        .header-quiz {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .timer { font-weight: 700; font-size: 1.2rem; color: #ff4757; }
+
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+            transition: width 0.5s ease;
+        }
+
+        .question-box h2 { font-size: 1.3rem; margin-bottom: 20px; line-height: 1.5; }
+
+        .options-list { list-style: none; }
+        .option-item {
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.1);
+            margin-bottom: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.2s;
+        }
+        .option-item:hover { background: rgba(255,255,255,0.2); transform: translateX(5px); }
+        .option-item.selected { background: #00d2ff; color: #fff; border-color: transparent; }
+        
+        /* Review Colors */
+        .option-item.correct { background: #2ed573 !important; color: white; }
+        .option-item.wrong { background: #ff4757 !important; color: white; }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: var(--transition);
+        }
+
+        .btn-start { background: #1e90ff; color: white; width: 100%; font-size: 1.1rem; }
+        .btn-next { background: #2ed573; color: white; }
+        .btn-prev { background: #747d8c; color: white; }
+        .btn-submit { background: #ff4757; color: white; }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: white;
+            padding: 15px 25px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 2000;
+            transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: #333;
+            min-width: 300px;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast-icon { margin-right: 15px; font-size: 1.5rem; }
+        .toast-close { margin-left: auto; cursor: pointer; opacity: 0.5; font-size: 1.2rem; }
+
+        /* Mobile Optimization */
+        @media (max-width: 600px) {
+            .container { padding: 20px; width: 95%; }
+            .setup-box h1 { font-size: 1.5rem; }
+            .size-btn { padding: 8px 15px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body class="dark-mode">
+
+    <button class="theme-toggle" onclick="toggleTheme()">Chế độ: Tối</button>
+
+    <div id="main-container" class="container size-normal">
+        
+        <div id="setup-screen" class="setup-box">
+            <h1>Hệ thống Trắc nghiệm Tin học 9</h1>
+            <p>Chọn kích thước cửa sổ trải nghiệm:</p>
+            <div class="size-selection">
+                <button class="size-btn active" onclick="setSize('normal', this)">Normal</button>
+                <button class="size-btn" onclick="setSize('large', this)">Large</button>
+                <button class="size-btn" onclick="setSize('full', this)">Full-Screen</button>
+            </div>
+            <button class="btn btn-start" onclick="startQuiz()">Bắt đầu ngay</button>
+        </div>
+
+        <div id="quiz-screen">
+            <div class="header-quiz">
+                <div id="question-number" style="font-weight: 600;">Câu hỏi 1/30</div>
+                <div class="timer" id="timer">15:00</div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="question-box">
+                <h2 id="question-text">Đang tải câu hỏi...</h2>
+                <div class="options-list" id="options-container"></div>
+            </div>
+            <div class="controls">
+                <button class="btn btn-prev" id="btn-prev" onclick="prevQuestion()" style="visibility: hidden;">Quay lại</button>
+                <button class="btn btn-next" id="btn-next" onclick="nextQuestion()">Tiếp theo</button>
+                <button class="btn btn-submit" id="btn-submit" onclick="submitQuiz()" style="display: none;">Nộp bài</button>
+            </div>
+        </div>
+
+        <div id="review-screen">
+            <div class="header-quiz">
+                <h2 id="review-title">Xem lại bài làm</h2>
+                <button class="btn btn-prev" onclick="restartQuiz()" style="background: #ffa502;">Làm lại</button>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" id="review-progress-bar" style="width: 100%"></div>
+            </div>
+            <div class="question-box">
+                <h2 id="review-question-text"></h2>
+                <div class="options-list" id="review-options-container"></div>
+            </div>
+            <div class="controls">
+                <button class="btn btn-prev" id="rev-btn-prev" onclick="prevReview()">Quay lại</button>
+                <button class="btn btn-next" id="rev-btn-next" onclick="nextReview()">Tiếp theo</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">
+        <span class="toast-icon" id="toast-icon"></span>
+        <div id="toast-message">Thông báo</div>
+        <span class="toast-close" onclick="closeToast()">×</span>
+    </div>
+
+    <script>
+        // Data Câu hỏi
+        const rawQuestions = [
+            { q: "Video thực chất được thể hiện dưới dạng nào?", a: ["Là các hình ảnh chuyển động, bản chất là một chuỗi các ảnh tĩnh xuất hiện kế tiếp nhau nhanh chóng.", "Chỉ là các hình ảnh tĩnh được sắp xếp ngẫu nhiên trên màn hình.", "Chỉ chứa âm thanh và các thông báo lỗi của hệ thống.", "Là một văn bản dài chứa nhiều thông tin."], c: 0 },
+            { q: "Các phần mềm tạo video trên máy tính có chức năng cơ bản nào sau đây?", a: ["Chỉ dùng để thiết kế và vẽ hình ảnh 3D.", "Nhập hình ảnh/video vào dự án; sắp xếp, cắt ghép; thêm văn bản, điều chỉnh thời lượng và xuất video.", "Chỉ dùng để tạo tiêu đề và phụ đề cho văn bản.", "Tính toán, xử lý dữ liệu phức tạp như bảng tính điện tử."], c: 1 },
+            { q: "Để khởi tạo một dự án video mới trong phần mềm Video Editor, ta chọn nút lệnh nào?", a: ["Open project", "Save project", "New video project", "Delete project"], c: 2 },
+            { q: "Trong giao diện của phần mềm Video Editor, khu vực nào chứa các hình ảnh, video được thêm vào để chuẩn bị cho dự án?", a: ["Bảng phân cảnh (Storyboard)", "Khung xem trước (Preview)", "Thanh công cụ (Toolbar)", "Thư viện dự án (Project library)"], c: 3 },
+            { q: "Bảng phân cảnh (Storyboard) trong Video Editor có chức năng chính là gì?", a: ["Hiển thị các cảnh (scene) của video theo thứ tự để tạo thành một câu chuyện.", "Chứa toàn bộ các tệp nguồn chưa qua chỉnh sửa.", "Cài đặt định dạng để xuất video ra các tệp khác nhau.", "Nơi chuyên dùng để thiết lập hiệu ứng âm thanh nền."], c: 0 },
+            { q: "Để chèn hình ảnh từ máy tính vào thư viện dự án trong Video Editor, ta chọn lệnh nào sau khi nhấn nút Add?", a: ["From my collection", "From this PC", "From the web", "From internet"], c: 1 },
+            { q: "Để thay đổi thời gian xuất hiện của một bức ảnh trong Video Editor, ta sử dụng công cụ nào trên thanh công cụ của bảng phân cảnh?", a: ["Add", "Rotate", "Duration", "Filters"], c: 2 },
+            { q: "Khi hình ảnh chèn vào video bị viền đen do không khớp với tỉ lệ màn hình, lệnh nào giúp ảnh tự động cắt theo tỉ lệ khung hình và che lấp viền đen?", a: ["Rotate", "Shrink to fit", "Remove video", "Remove black bars"], c: 3 },
+            { q: "Lệnh nào dùng để xoay hình ảnh trong bảng phân cảnh của Video Editor để sửa lỗi ảnh bị ngược chiều?", a: ["Rotate", "Duration", "Add title card", "Trim"], c: 0 },
+            { q: "Để thêm các bản nhạc nền có sẵn của Video Editor vào dự án video, ta chọn nút lệnh nào?", a: ["Custom audio", "Background music", "Add audio file", "Sound effect"], c: 1 },
+            { q: "Tính năng nào trong cài đặt âm thanh của Video Editor giúp âm lượng nhạc nền tăng dần một cách nhẹ nhàng ở đoạn đầu video?", a: ["Fade out", "Sync your video to this music's beat", "Fade in", "Music volume"], c: 2 },
+            { q: "Để thêm tệp âm thanh của riêng mình vào video, ta chọn thao tác nào sau đây?", a: ["Chọn mục Background music.", "Chọn lệnh Add background.", "Mở Audio setting.", "Chọn Custom audio, sau đó chọn Add audio file."], c: 3 },
+            { q: "Để cắt bỏ một phần không cần thiết ở đầu hoặc cuối của một đoạn video, ta sử dụng chức năng nào trong Video Editor?", a: ["Trim", "Split", "Speed", "Filters"], c: 0 },
+            { q: "Chức năng Split trên thanh công cụ của bảng phân cảnh dùng để làm gì?", a: ["Gộp nhiều video nhỏ thành một video lớn.", "Chia tách một đoạn video thành hai đoạn video khác nhau.", "Tăng tốc độ phát video lên nhiều lần.", "Thêm hiệu ứng âm thanh 3D vào video."], c: 1 },
+            { q: "Để làm video phát nhanh hơn hoặc chậm hơn, ta dùng công cụ nào trong Video Editor?", a: ["Duration", "Trim", "Speed", "Split"], c: 2 },
+            { q: "Trong Video Editor, công cụ nào giúp tạo hiệu ứng chuyển động cho hình ảnh tĩnh?", a: ["Filters", "3D effects", "Add text", "Motion"], c: 3 },
+            { q: "Bộ lọc màu (Filters) trong phần mềm Video Editor có tác dụng gì?", a: ["Điều chỉnh màu sắc cho một số hình ảnh/video để tạo phong cách và thu hút người xem.", "Chèn thêm đoạn hội thoại âm thanh vào video.", "Cắt bỏ các khung hình bị lỗi trong đoạn video.", "Tự động tạo chuyển động xoay tròn cho camera."], c: 0 },
+            { q: "Để thêm các hiệu ứng sinh động như tuyết rơi, lá rơi, sấm sét vào video, ta cần chọn chức năng nào?", a: ["Motion", "3D effects", "Filters", "Text"], c: 1 },
+            { q: "Để thêm một trang tiêu đề riêng biệt đứng trước một bức ảnh hoặc video, ta dùng nút lệnh nào?", a: ["Add Text", "Insert Image", "Add title card", "Custom audio"], c: 2 },
+            { q: "Khi chỉnh sửa tiêu đề (Text), mục nào cho phép chọn kiểu hiệu ứng xuất hiện của chữ?", a: ["Layout", "Background", "Text box", "Animated text style"], c: 3 },
+            { q: "Quá trình giải quyết một vấn đề nói chung thường trải qua mấy giai đoạn chính?", a: ["4 giai đoạn (Tìm hiểu -> Xây dựng/lựa chọn -> Thực hiện -> Đánh giá).", "3 giai đoạn.", "2 giai đoạn.", "5 giai đoạn."], c: 0 },
+            { q: "Bước đầu tiên trong quy trình con người giao bài toán cho máy tính giải quyết là gì?", a: ["Viết chương trình bằng ngôn ngữ lập trình.", "Xác định bài toán (Xác định Input và Output).", "Tìm và xây dựng thuật toán.", "Chạy thử và sửa lỗi chương trình."], c: 1 },
+            { q: "Khi xác định bài toán, Input và Output lần lượt được hiểu là gì?", a: ["Đầu ra và đầu vào của bài toán.", "Thuật toán xử lý và chương trình máy tính.", "Dữ liệu vào (điều kiện cho trước) và kết quả cần đưa ra.", "Bàn phím máy tính và màn hình hiển thị."], c: 2 },
+            { q: "Sau khi đã xác định bài toán và tìm được thuật toán, bước tiếp theo cần làm là gì?", a: ["Lặp lại bước xác định bài toán.", "Nâng cấp phần cứng máy tính.", "Vẽ lại sơ đồ khối.", "Viết chương trình bằng một ngôn ngữ lập trình có thể hiểu được."], c: 3 },
+            { q: "Việc 'chạy thử chương trình' trên máy tính nhằm mục đích cốt lõi nào?", a: ["Phát hiện lỗi và sửa những lỗi đã tìm thấy để chương trình hoạt động đúng.", "Tự động trang trí cho giao diện chương trình đẹp hơn.", "Kiểm tra xem phần cứng máy tính có bị hỏng không.", "Định dạng lại văn bản để in ra giấy."], c: 0 },
+            { q: "Thuật toán (Algorithm) được hiểu là gì?", a: ["Là một phần mềm máy tính đã được đóng gói sẵn.", "Là bảng liệt kê các bước hoặc sơ đồ khối hướng dẫn thao tác để giải quyết bài toán.", "Là ngôn ngữ lập trình trực quan Scratch.", "Là kết quả đầu ra cuối cùng của mọi bài toán."], c: 1 },
+            { q: "Khi sử dụng sơ đồ khối để mô tả thuật toán, hình thoi thường dùng để thể hiện điều gì?", a: ["Bắt đầu hoặc Kết thúc.", "Thao tác tính toán, xử lý dữ liệu.", "Bước kiểm tra điều kiện (Đúng/Sai).", "Đầu vào (Input) hoặc Đầu ra (Output)."], c: 2 },
+            { q: "Trong Scratch, để tạo nhiều nhân vật giống hệt nhau từ 1 nhân vật gốc, ta dùng lệnh gì?", a: ["Delete", "Hide", "Export", "Duplicate (nhân bản)"], c: 3 },
+            { q: "Việc dùng máy tính để giải quyết bài toán mang lại lợi ích nổi bật nào?", a: ["Giúp giải quyết bài toán nhanh chóng, tự động và chính xác hơn.", "Máy tính tự hiểu mọi vấn đề không cần xác định Input/Output.", "Giúp con người không cần phải tư duy tìm thuật toán nữa.", "Làm cho quá trình trở nên phức tạp và tốn thời gian hơn."], c: 0 },
+            { q: "Trong Scratch, khối lệnh nào thực hiện hành động lặp lại mãi mãi?", a: ["repeat (10)", "forever (liên tục)", "if ... then", "wait (1) seconds"], c: 1 }
+        ];
+
+        let questions = [];
+        let currentIdx = 0;
+        let userAnswers = [];
+        let timerSeconds = 15 * 60;
+        let timerInterval;
+        let maxReachedIdx = 0;
+        let toastTimer;
+
+        // Theme Toggle
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.querySelector('.theme-toggle');
+            if (body.classList.contains('dark-mode')) {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+                btn.textContent = "Chế độ: Sáng";
+            } else {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                btn.textContent = "Chế độ: Tối";
+            }
+        }
+
+        // Window Size
+        function setSize(size, btn) {
+            const container = document.getElementById('main-container');
+            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            container.className = 'container size-' + size;
+            if (size === 'full') {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(e => {});
+                }
+            } else {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Shuffle
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function startQuiz() {
+            questions = shuffle([...rawQuestions]);
+            userAnswers = new Array(questions.length).fill(null);
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('quiz-screen').style.display = 'block';
+            startTimer();
+            showQuestion();
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timerSeconds--;
+                let m = Math.floor(timerSeconds / 60);
+                let s = timerSeconds % 60;
+                document.getElementById('timer').textContent = `${m}:${s < 10 ? '0' + s : s}`;
+                if (timerSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    submitQuiz();
+                }
+            }, 1000);
+        }
+
+        function showQuestion() {
+            const q = questions[currentIdx];
+            document.getElementById('question-number').textContent = `Câu hỏi ${currentIdx + 1}/${questions.length}`;
+            document.getElementById('question-text').textContent = q.q;
+            
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            q.a.forEach((opt, index) => {
+                const div = document.createElement('div');
+                div.className = `option-item ${userAnswers[currentIdx] === index ? 'selected' : ''}`;
+                div.textContent = `${String.fromCharCode(65 + index)}. ${opt}`;
+                div.onclick = () => selectOption(index);
+                container.appendChild(div);
+            });
+
+            // Progress Bar Logic
+            if (currentIdx > maxReachedIdx) maxReachedIdx = currentIdx;
+            const prog = ((maxReachedIdx + 1) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = prog + '%';
+
+            // Controls
+            document.getElementById('btn-prev').style.visibility = currentIdx === 0 ? 'hidden' : 'visible';
+            if (currentIdx === questions.length - 1) {
+                document.getElementById('btn-next').style.display = 'none';
+                document.getElementById('btn-submit').style.display = 'block';
+            } else {
+                document.getElementById('btn-next').style.display = 'block';
+                document.getElementById('btn-submit').style.display = 'none';
+            }
+        }
+
+        function selectOption(idx) {
+            userAnswers[currentIdx] = idx;
+            showQuestion();
+        }
+
+        function nextQuestion() {
+            if (currentIdx < questions.length - 1) {
+                currentIdx++;
+                showQuestion();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentIdx > 0) {
+                currentIdx--;
+                showQuestion();
+            }
+        }
+
+        function submitQuiz() {
+            clearInterval(timerInterval);
+            document.getElementById('quiz-screen').style.display = 'none';
+            document.getElementById('review-screen').style.display = 'block';
+            currentIdx = 0;
+            showReview();
+        }
+
+        // Review System
+        function showReview() {
+            const q = questions[currentIdx];
+            const userAns = userAnswers[currentIdx];
+            const isCorrect = userAns === q.c;
+
+            document.getElementById('review-question-text').textContent = `[Review] Câu ${currentIdx + 1}: ${q.q}`;
+            const container = document.getElementById('review-options-container');
+            container.innerHTML = '';
+
+            q.a.forEach((opt, index) => {
+                const div = document.createElement('div');
+                div.className = 'option-item';
+                if (index === q.c) div.classList.add('correct');
+                if (index === userAns && index !== q.c) div.classList.add('wrong');
+                div.textContent = `${String.fromCharCode(65 + index)}. ${opt}`;
+                container.appendChild(div);
+            });
+
+            // Toast feedback
+            showToast(isCorrect);
+
+            document.getElementById('rev-btn-prev').style.visibility = currentIdx === 0 ? 'hidden' : 'visible';
+            document.getElementById('rev-btn-next').style.visibility = currentIdx === questions.length - 1 ? 'hidden' : 'visible';
+        }
+
+        function showToast(isCorrect) {
+            clearTimeout(toastTimer);
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+
+            if (isCorrect) {
+                icon.textContent = '✅';
+                msg.textContent = 'Bạn đã trả lời đúng câu này!';
+                toast.style.borderLeft = '5px solid #2ed573';
+            } else {
+                icon.textContent = '❌';
+                msg.textContent = userAnswers[currentIdx] === null ? 'Bạn đã bỏ trống câu này.' : 'Bạn đã chọn sai đáp án.';
+                toast.style.borderLeft = '5px solid #ff4757';
+            }
+
+            toast.classList.add('show');
+            toastTimer = setTimeout(closeToast, 10000);
+        }
+
+        function closeToast() {
+            document.getElementById('toast').classList.remove('show');
+        }
+
+        function nextReview() {
+            if (currentIdx < questions.length - 1) {
+                currentIdx++;
+                showReview();
+            }
+        }
+
+        function prevReview() {
+            if (currentIdx > 0) {
+                currentIdx--;
+                showReview();
+            }
+        }
+
+        function restartQuiz() {
+            closeToast();
+            currentIdx = 0;
+            maxReachedIdx = 0;
+            timerSeconds = 15 * 60;
+            document.getElementById('review-screen').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'block';
+        }
+
+        function restartQuizNow() {
+            restartQuiz();
+            startQuiz();
+        }
+    </script>
+</body>
+</html>
